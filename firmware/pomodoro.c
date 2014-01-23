@@ -1,3 +1,11 @@
+/*
+* ----------------------------------------------------------------------------
+* "THE BEER-WARE LICENSE" (Revision 42):
+* <fakufaku@gmail.com> wrote this file. As long as you retain this notice you
+* can do whatever you want with this stuff. If we meet some day, and you think
+* this stuff is worth it, you can buy me a beer in return -- Robin Scheibler
+* ----------------------------------------------------------------------------
+*/
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -12,7 +20,7 @@
 #define TWENTY_FIVE_MINUTES 360
 #define FIVE_MINUTES 72
 
-// OVF period if ~4.2s
+// OVF period is ~4.2s
 #define TIMER1_CLKDIV16384 ((1 << CS13) | (1 << CS12) | (1 << CS11) | (1 << CS10))
 // OVF period is ~1.05s
 #define TIMER1_CLKDIV4096  ((1 << CS13) | (1 << CS12) | (1 << CS10))
