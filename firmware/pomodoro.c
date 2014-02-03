@@ -75,7 +75,6 @@ void set_state(int new_state)
 
     case BUZZ:
       state = BUZZ;
-      next_state = IDLE;
       timer_counter = 3;
       SET_TIMER1(TIMER1_CLKDIV512);
       LED_array = 0x00;
@@ -98,7 +97,7 @@ void set_state(int new_state)
   }
 }
 
-// macros to access individual LEDs
+// macros to access individual LEDs through Charlieplexing
 void led_on(int p)
 {
   switch (p)
