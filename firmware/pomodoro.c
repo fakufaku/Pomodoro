@@ -338,8 +338,7 @@ void go_to_sleep()
 
 int main()
 {
-  int i, j;
-  unsigned int el;
+  int i;
 
   // enable interrupts
   sei();
