@@ -84,9 +84,9 @@ void set_state(int new_state)
     case WAIT:
       // go to WAIT state
       state = WAIT;
-      timer_counter = FIVE_MINUTES;
+      timer_counter = FIVE_MINUTES-1;
       LED_array = 0x1F;
-      SET_TIMER1(TIMER1_CLKDIV4096);
+      SET_TIMER1(TIMER1_CLKDIV16384);
       break;
 
     case BKOF:

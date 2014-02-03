@@ -54,6 +54,38 @@ following in a terminal.
     make avrdude
 
 
+### Code concept
+
+My goal was to use explore the possibilities of the ATtiny85 microcontroller. We use it here
+as a timer that first counts 25 minutes (work time) and emit a signal. Then, we can start a second
+counter for 5 minutes (rest time). Here is what we use.
+
+* A tactile switch connected to the _INT0_ of the avr as the sole user input. We use it
+  to turn the counter off and switch between different modes.
+* A buzzer to give a discrete signal when the timer expires. The buzzer is driven
+    by _TIMER0_ in PWM mode at 4 kHz, 50% duty cycle.
+* As many LEDs as possible to indicate the progress of the timer. By default,
+    the ATtiny85 has 5 GPIO pins (we could add an extra one, but would lose ISP).
+    We have thus 3 GPIO remaining.   
+    We assign all of them to LEDs and using
+    [charlieplexing](https://en.wikipedia.org/wiki/Charlieplexing), it is
+    possible to drive 6 LEDs using only 3 pins. We choose 5 yellow, for every 5
+    minutes slice of the first timer, and a single red one, for the _rest time_
+    of the second timer.
+
+The code is completely interrupt driven. _TIMER1_ and its overflow interrupt
+are used to keep track of time during each state. The tactile switch triggers
+an interrupt to wake up the avr, or switch between states. The [finite state
+machine](https://en.wikipedia.org/wiki/Finite-state_machine) looks like this.
+Blue arrows are state switching triggered by a push on the button. Red arrows
+are switching caused by the timer expiration.
+
+![](doc/pomodoro_fsm.png)
+
+The _main_ states are black circles. The grey circles are the transition states.
+It was important to add the `BACKOFF` state to debounce the tactile button because it triggered multiple interrupts.
+
+
 License
 -------
 
