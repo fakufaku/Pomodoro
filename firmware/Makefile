@@ -28,3 +28,6 @@ readfuse:
 	avrdude -c ${PROGRAMMER} -p ${CPU} -U lfuse:r:-:h 2> /dev/null
 	avrdude -c ${PROGRAMMER} -p ${CPU} -U hfuse:r:-:h 2> /dev/null
 	avrdude -c ${PROGRAMMER} -p ${CPU} -U efuse:r:-:h 2> /dev/null
+
+clean:
+	rm -rf ${ELF} ${OBJECT} ${HEX}

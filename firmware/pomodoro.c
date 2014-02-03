@@ -9,15 +9,12 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-#include <limits.h>
-#include <stdlib.h>
 
 // Allows to disable interrupt in some parts of the code
 #define ENTER_CRIT()    {char volatile saved_sreg = SREG; cli()
 #define LEAVE_CRIT()    SREG = saved_sreg;}
 
 // We assume 1MHz CPU clock divided by 16384
-#define TWENTY_FIVE_MINUTES 360
 #define FIVE_MINUTES 72
 
 // OVF period is ~4.2s
@@ -31,7 +28,7 @@
 // disable TIMER1
 #define TIMER1_DISABLED 0
 // macro to set timer1
-#define SET_TIMER1(x) {TCCR1 = x;}
+#define SET_TIMER1(x) {TCCR1 = x; TCNT1 = 0x0;}
 
 // beginning of work 
 unsigned long timer_counter = 0;
@@ -42,11 +39,64 @@ unsigned char LED_array = 0;
 // the state variable
 #define IDLE 0
 #define WORK 1
-#define BUZZ_END_WORK 2
+#define BUZZ 2
 #define WAIT 3
 #define REST 4
-#define BUZZ_END_REST 5
+#define BKOF 5
 unsigned char state = IDLE;
+unsigned char next_state = IDLE;
+
+void set_state(int new_state)
+{
+  switch (new_state)
+  {
+    case WORK:
+      // go into WORK time
+      state = WORK;
+      timer_counter = 5*FIVE_MINUTES-1;
+      SET_TIMER1(TIMER1_CLKDIV16384);
+      LED_array = 0x1F;
+      break;
+
+    case REST:
+      // go into REST time
+      state = REST;
+      timer_counter = FIVE_MINUTES-1;
+      SET_TIMER1(TIMER1_CLKDIV16384);
+      LED_array = 0x20;
+      break;
+
+    case IDLE:
+      // go back to IDLE mod
+      state = IDLE;
+      SET_TIMER1(TIMER1_DISABLED);
+      LED_array = 0x00;
+      break;
+
+    case BUZZ:
+      state = BUZZ;
+      next_state = IDLE;
+      timer_counter = 3;
+      SET_TIMER1(TIMER1_CLKDIV512);
+      LED_array = 0x00;
+      break;
+
+    case WAIT:
+      // go to WAIT state
+      state = WAIT;
+      timer_counter = FIVE_MINUTES;
+      LED_array = 0x1F;
+      SET_TIMER1(TIMER1_CLKDIV4096);
+      break;
+
+    case BKOF:
+      // go to backoff state (debounce button)
+      state = BKOF;
+      SET_TIMER1(TIMER1_CLKDIV1024);
+      LED_array = 0x0;
+      break;
+  }
+}
 
 // macros to access individual LEDs
 void led_on(int p)
@@ -120,6 +170,7 @@ void led_on(int p)
       break;
 
     default:
+      // turn all LEDs off
       DDRB &= ~(1 << DDB1) & ~(1 << DDB3) & ~(1 << DDB4);
       PORTB &= ~(1 << 1) & ~(1 << 3) & ~(1 << 4);;
       break;
@@ -136,13 +187,13 @@ void buzz_start()
   // no clock divider (~4kHz @ clk 1MHz)
   TCCR0A = (1 << COM0A1) | (1 << WGM01) | (1 << WGM00);
   TCCR0B = (1 << CS00);
-  OCR0A = 128;
+  OCR0A = 128;  // half duty cycle
 }
 
 void buzz_stop()
 {
-  TCCR0A = 0x0;
-  DDRB &= ~(1 << DDB0);
+  TCCR0A = 0x0;   // stop timer
+  DDRB &= ~(1 << DDB0); // set PB0 as input
 }
 
 // The timer overflow interrupt routine
@@ -155,20 +206,52 @@ SIGNAL(TIMER1_OVF_vect)
     case WORK:
       if (timer_counter > 0)
       {
-        LED_array = ((1 << 5)-1) ^ (1 << ((TWENTY_FIVE_MINUTES-timer_counter)/FIVE_MINUTES))-1;
+        // This will light one LED for each 5 second slice remaining
+        LED_array = ((1 << 5)-1) ^ (1 << (((5*FIVE_MINUTES)-timer_counter)/FIVE_MINUTES))-1;
         timer_counter--;
       }
       else
       {
-        // go to WAIT state
-        state = BUZZ_END_WORK;
-        timer_counter = 3;
-        SET_TIMER1(TIMER1_CLKDIV512);
-        LED_array = 0x20;
+        set_state(BUZZ);
+        next_state = WAIT;
       }
       break;
 
-    case BUZZ_END_WORK:
+    case WAIT:
+      // in this state, we just blink yellow/red LEDs alternatively
+      if (timer_counter == 0)
+      {
+        // if the timer expire without any action, turn off
+        set_state(IDLE);
+      }
+      else if (timer_counter % 2 == 0)
+      {
+        // red
+        LED_array = 0x20;
+        timer_counter--;
+      }
+      else
+      {
+        // yellow
+        LED_array = 0x1F;
+        timer_counter--;
+      }
+      break;
+
+    case REST:
+      if (timer_counter > 0)
+      {
+        LED_array = (1 << 5);
+        timer_counter--;
+      }
+      else
+      {
+        set_state(BUZZ);
+        next_state = IDLE;
+      }
+      break;
+      
+    case BUZZ:
       // control buzzer
       if (timer_counter % 2 == 1)
         buzz_start();
@@ -181,59 +264,12 @@ SIGNAL(TIMER1_OVF_vect)
       }
       else
       {
-        // go to WAIT state
-        state = WAIT;
-        timer_counter = 0;
-        LED_array = 0x1F;
-        SET_TIMER1(TIMER1_CLKDIV4096);
+        set_state(next_state);
       }
       break;
 
-    case WAIT:
-      if (timer_counter == 0)
-      {
-        LED_array = 0x20;
-        timer_counter = 1;
-      }
-      else
-      {
-        LED_array = 0x1F;
-        timer_counter = 0;
-      }
-      break;
-
-    case REST:
-      if (timer_counter > 0)
-      {
-        LED_array = (1 << 5);
-        timer_counter--;
-      }
-      else
-      {
-        state = BUZZ_END_REST;
-        timer_counter = 3;
-        SET_TIMER1(TIMER1_CLKDIV512);
-        LED_array = 0x00;
-      }
-      break;
-      
-    case BUZZ_END_REST:
-      if (timer_counter > 0)
-      {
-        if (timer_counter % 2 == 1)
-          buzz_start();
-        else
-          buzz_stop();
-        timer_counter--;
-      }
-      else
-      {
-        // go to IDLE state
-        state = IDLE;
-        timer_counter = 0;
-        LED_array = 0x00;
-        SET_TIMER1(TIMER1_DISABLED);
-      }
+    case BKOF:
+      set_state(next_state);
       break;
 
   }
@@ -246,34 +282,31 @@ SIGNAL(INT0_vect)
 {
   // go into safe mode
   ENTER_CRIT();
-  
+
   // state machine
   switch (state)
   {
+    case BKOF:
+    case BUZZ:
+      break;
+
     case IDLE:
+      set_state(BKOF); // debounce
       // go into WORK time
-      state = WORK;
-      timer_counter = TWENTY_FIVE_MINUTES;
-      SET_TIMER1(TIMER1_CLKDIV16384);
-      LED_array = 0x1F;
+      next_state = WORK;
       break;
 
     case WORK:
-    case BUZZ_END_WORK:
     case WAIT:
-      // go into REST time
-      state = REST;
-      timer_counter = FIVE_MINUTES;
-      SET_TIMER1(TIMER1_CLKDIV16384);
-      LED_array = 0x20;
+      set_state(BKOF); // debounce
+      // go into rest mode
+      next_state = REST;
       break;
 
-    case BUZZ_END_REST:
     case REST:
+      set_state(BKOF); // debounce
       // go back to IDLE mod
-      state = IDLE;
-      SET_TIMER1(TIMER1_DISABLED);
-      LED_array = 0x00;
+      next_state = IDLE;
       break;
   }
   
@@ -320,11 +353,8 @@ int main()
  
 
   // set up timer 1 as system clock
-  //TCCR1 = (1 << CS13) | (1 << CS12) | (1 << CS11) | (1 << CS10); // T1 clock to clk/16384
-  TCCR1 = (1 << CS13) | (1 << CS12) | (1 << CS10); // T1 clock to clk/16384
+  TCCR1 = (1 << CS13) | (1 << CS12) | (1 << CS10); // T1 clock to clk/4096
   TIMSK = (1 << TOIE1);   // set the overflow interrupt
-
-  LED_array = (1 << 7)-1;
 
   // The infinite loop
   while (1)
@@ -337,6 +367,10 @@ int main()
     for (i = 0 ; i < 6 ; i++)
       if ((LED_array >> i) & 1)
         led_on(i);
+
+    // turn all LED off if needed
+    if (LED_array == 0)
+      led_on(-1);
   }
 
 }

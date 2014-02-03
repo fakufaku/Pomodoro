@@ -21,10 +21,10 @@ Build it
 * 1x ATtiny85
 * 5x LED yellow, SMD 0805
 * 1x LED red, SMD 0805
-* 3x 50 Ohm Resistor, SMD 0805
+* 3x 22 Ohm Resistor, SMD 0805
 * 2x 1K Ohm Resistor, SMD 0805
 * 1x PNP BPJ transistor, SOT-23 (BC846CMTF)
-* 1x 1 mH Inductor, SMD 1007
+* 1x 1mH Inductor, SMD 1007
 * 1x Buzzer, SMD [mouser](http://www.mouser.com/ProductDetail/Kobitone/254-PB501-ROX/?qs=%2fha2pyFaduio21Wb3%2fEgDw7Itv2u2RCUk%252bCSGDldQmgXvX6wRiKaqw%3d%3d)
 * 1x CR2032 coin cell holder, SMD [mouser](http://www.mouser.com/ProductDetail/Linx-Technologies/BAT-HLD-001/?qs=sGAEpiMZZMupuRtfu7GC%252bdEIlVvqTbq%252bJLMEoC1V420%3d)
 * 1x Tactile switch, SMD EVQ-Q2 [mouser](http://www.mouser.com/ProductDetail/Panasonic/EVQ-Q2K03W/?qs=sGAEpiMZZMsgGjVA3toVBA4puZS2llK5hCEf4xZ%2f9rI%3d)
