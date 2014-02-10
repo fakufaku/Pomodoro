@@ -23,7 +23,7 @@ Build it
 * 1x LED red, SMD 0805
 * 3x 22 Ohm Resistor, SMD 0805
 * 2x 1K Ohm Resistor, SMD 0805
-* 1x PNP BPJ transistor, SOT-23 (BC846CMTF)
+* 1x NPN BJT transistor, SOT-23 (BC846CMTF)
 * 1x 1mH Inductor, SMD 1007
 * 1x Buzzer, SMD [mouser](http://www.mouser.com/ProductDetail/Kobitone/254-PB501-ROX/?qs=%2fha2pyFaduio21Wb3%2fEgDw7Itv2u2RCUk%252bCSGDldQmgXvX6wRiKaqw%3d%3d)
 * 1x CR2032 coin cell holder, SMD [mouser](http://www.mouser.com/ProductDetail/Linx-Technologies/BAT-HLD-001/?qs=sGAEpiMZZMupuRtfu7GC%252bdEIlVvqTbq%252bJLMEoC1V420%3d)
