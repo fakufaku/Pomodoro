@@ -54,7 +54,8 @@ following in a terminal.
     make avrdude
 
 
-### Code concept
+The Code
+--------
 
 My goal was to use explore the possibilities of the ATtiny85 microcontroller. We use it here
 as a timer that first counts 25 minutes (work time) and emit a signal. Then, we can start a second
