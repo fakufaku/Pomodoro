@@ -7,6 +7,7 @@
 * ----------------------------------------------------------------------------
 */
 
+#include <avr/sleep.h>
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
@@ -285,14 +286,14 @@ SIGNAL(INT0_vect)
   // state machine
   switch (state)
   {
-    case BKOF:
-    case BUZZ:
-      break;
-
     case IDLE:
       set_state(BKOF); // debounce
       // go into WORK time
       next_state = WORK;
+      break;
+
+    case BKOF:
+    case BUZZ:
       break;
 
     case WORK:
@@ -323,17 +324,24 @@ void go_to_sleep()
   DDRB &= ~(1 << DDB0) & ~(1 << DDB1) & ~(1 << DDB3) & ~(1 << DDB4);
   PORTB &= ~(1 << 0) & ~(1 << 1) & ~(1 << 3) & ~(1 << 4);
 
-  // deepest sleep-mode
-  MCUCR |= (1 << SM1); // power-down mode
+  // The CPU can only wake up from power down through a LOW-LEVEL interrupt
+  MCUCR &= ~(1 << ISC01) & ~(1 << ISC00); // INT0 interrupt on low level
+ 
+  // Power reduction (shut down both timers, USI and ADC)
+  PRR = (1 << PRUSI) | (1 << PRADC);
 
-  // Power reduction
-  PRR |= (1 << PRADC);
+  // Disable watchdog completely
+  WDTCR = 0x0;
 
-  // sleep now
-  MCUCR |= (1 << SE);
+  /* put the cpu in deepest sleep mode */
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);
+  sleep_enable();
+  sleep_cpu();
+  sleep_disable();
+  
+  // In normal use, we want the button interrupt to happen on falling edge.
+  MCUCR |= (1 << ISC01);
 
-  // clear sleepy bit
-  MCUCR &= ~(1 << SE);
 }
 
 int main()
@@ -363,12 +371,16 @@ int main()
 
     // display LEDs
     for (i = 0 ; i < 6 ; i++)
+    {
       if ((LED_array >> i) & 1)
         led_on(i);
+      else
+        led_on(-1);
+    }
 
-    // turn all LED off if needed
-    if (LED_array == 0)
+    if (LED_array == 0x0)
       led_on(-1);
+      
   }
 
 }

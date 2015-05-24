@@ -1,6 +1,8 @@
 
 CC=avr-gcc
-PROGRAMMER=usbtiny
+#PROGRAMMER=usbtiny
+PROGRAMMER=avrisp2
+PORT=usb
 CPU=attiny85
 
 SOURCE=pomodoro.c
@@ -8,9 +10,9 @@ OBJECT=pomodoro.o
 ELF=pomodoro.elf
 HEX=pomodoro.hex
 
-LFUSE=
-HFUSE=
-EFUSE=
+LFUSE=0x42
+HFUSE=0xDF
+EFUSE=0xFF
 
 object: ${SOURCE}
 	${CC} -mmcu=${CPU} -c ${SOURCE}
@@ -22,12 +24,18 @@ hex: elf
 	avr-objcopy -j .text -j .data -O ihex ${ELF} ${HEX}
 
 avrdude: hex
-	avrdude -c ${PROGRAMMER} -p ${CPU} -U flash:w:${HEX}:i
+	avrdude -c ${PROGRAMMER} -P ${PORT} -p ${CPU} -U flash:w:${HEX}:i
 
-readfuse:
+rfuse:
 	avrdude -c ${PROGRAMMER} -p ${CPU} -U lfuse:r:-:h 2> /dev/null
 	avrdude -c ${PROGRAMMER} -p ${CPU} -U hfuse:r:-:h 2> /dev/null
 	avrdude -c ${PROGRAMMER} -p ${CPU} -U efuse:r:-:h 2> /dev/null
+
+wfuse:
+	avrdude -c ${PROGRAMMER} -p ${CPU} -U lfuse:w:${LFUSE}:m 2> /dev/null
+	avrdude -c ${PROGRAMMER} -p ${CPU} -U hfuse:w:${HFUSE}:m 2> /dev/null
+	avrdude -c ${PROGRAMMER} -p ${CPU} -U efuse:w:${EFUSE}:m 2> /dev/null
+
 
 clean:
 	rm -rf ${ELF} ${OBJECT} ${HEX}
